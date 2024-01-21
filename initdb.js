@@ -1,5 +1,6 @@
 const sql = require('better-sqlite3');
 const db = sql('cars.db');
+const db2 = sql('users.db');
 
 const dummyCars = [
   {
@@ -81,6 +82,25 @@ const dummyCars = [
   },
 ];
 
+const dummyUsers = [
+  {
+    email: 'a@a.com',
+    name: 'a',
+    password: 'a',
+    avatar: '/images/avatar.jpg',
+    created_at: new Date(),
+    updated_at: new Date(),
+  },
+  {
+    email: 'b@b.com',
+    name: 'b',
+    password: 'b',
+    avatar: '/images/avatar.jpg',
+    created_at: new Date(),
+    updated_at: new Date(),
+  },
+];
+
 db.prepare(
   `
    CREATE TABLE IF NOT EXISTS cars (
@@ -97,24 +117,49 @@ db.prepare(
 `
 ).run();
 
-async function initData() {
-  const stmt = db.prepare(`
-      INSERT INTO cars VALUES (
-         null,
-         @slug,
-         @title,
-         @image,
-         @summary,
-         @manufacturer,
-         @model,
-         @year,
-         @price
+db.prepare(
+  `
+   CREATE TABLE IF NOT EXISTS users (
+       id INTEGER PRIMARY KEY AUTOINCREMENT,
+       email TEXT NOT NULL UNIQUE,
+       password TEXT NOT NULL,
+       name TEXT NOT NULL,
+       avatar TEXT,
+       created_at TEXT,
+       updated_at TEXT
+    )
+`
+).run();
+
+function initData() {
+  const insertCar = db.prepare(`
+      INSERT INTO cars (slug, title, image, summary, manufacturer, model, year, price) VALUES (
+         @slug, @title, @image, @summary, @manufacturer, @model, @year, @price
       )
-   `);
+  `);
 
   for (const car of dummyCars) {
-    stmt.run(car);
+    insertCar.run(car);
+  }
+
+  const insertUser = db.prepare(`
+      INSERT INTO users (email, password, name, avatar, created_at, updated_at) VALUES (
+         @email, 'your_default_password', @name, @avatar, @created_at, @updated_at
+      )
+  `);
+
+  for (const user of dummyUsers) {
+    user.created_at = new Date().toISOString();
+    user.updated_at = new Date().toISOString();
+    insertUser.run(user);
   }
 }
 
-initData();
+try {
+  initData();
+} catch (error) {
+  console.error('Database initialization failed:', error);
+} finally {
+  db.close();
+  db2.close();
+}
